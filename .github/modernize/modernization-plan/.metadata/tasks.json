@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Tasks template for modernization plan. Generate this file alongside plan.md to track individual migration tasks.",
+  "tasks": [
+    {
+      "type": "upgrade",
+      "id": "001-upgrade-dotnet-to-net10",
+      "description": "Upgrade the application runtime to the latest .NET LTS baseline.",
+      "reason": "The application currently targets .NET Framework 4.8 and needs a modern supported baseline for Azure-first modernization work.",
+      "requirements": "Upgrade the project from .NET Framework 4.8 to .NET 10 (net10.0) and convert project/build assets as required for a supported migration baseline.",
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "002-transform-sqlserver-to-azure-sql",
+      "description": "Modernize data access configuration to use Azure SQL Database.",
+      "reason": "Assessment identified SQL database connection usage and SqlClient dependency patterns that should be moved to Azure-native authentication.",
+      "requirements": "Addresses issues: SQL database connection detected, System.Data.SqlClient dependency detected. Migrate SQL connectivity to Azure SQL Database using managed identity and remove SQL credential-based configuration.",
+      "dependencies": [
+        "001-upgrade-dotnet-to-net10"
+      ],
+      "skills": [
+        {
+          "name": "migration-azure-sql-database",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "003-transform-appsettings-to-azure-app-configuration",
+      "description": "Externalize non-secret application settings to Azure App Configuration.",
+      "reason": "Assessment identified hardcoded URL patterns that should be moved out of source-managed configuration into Azure-managed configuration.",
+      "requirements": "Addresses issues: Hardcoded URLs detected. Move non-secret app settings from local configuration to Azure App Configuration while preserving application configuration shape.",
+      "dependencies": [
+        "001-upgrade-dotnet-to-net10"
+      ],
+      "skills": [
+        {
+          "name": "migration-local-appsettings-azure-app-configuration-via-deployment",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "security",
+      "id": "004-security-cve-remediation",
+      "description": "Scan dependencies for known CVEs and remediate identified vulnerabilities.",
+      "reason": "Security remediation is mandatory before cloud deployment to ensure modernized workloads are not deployed with known vulnerabilities.",
+      "requirements": "Scan all project dependencies for CVEs and upgrade vulnerable dependencies to patched versions. If major upgrades are required, document breaking-change risks and verify build and tests after remediation.",
+      "dependencies": [
+        "001-upgrade-dotnet-to-net10",
+        "002-transform-sqlserver-to-azure-sql",
+        "003-transform-appsettings-to-azure-app-configuration"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "deployment",
+      "id": "005-deployment-azure-container-apps",
+      "description": "Deploy the modernized application to Azure Container Apps.",
+      "reason": "The project needs an Azure deployment target to run the upgraded and transformed application in a managed cloud platform.",
+      "requirements": "Deploy the upgraded application to Azure Container Apps, including required containerization and environment configuration for runtime settings.",
+      "dependencies": [
+        "004-security-cve-remediation"
+      ],
+      "skills": [
+        {
+          "name": "azcli-containerapp-deploy",
+          "location": "builtin"
+        }
+      ],
+      "targetAzureService": "Azure Container Apps",
+      "resourceStatus": "create new service",
+      "deploymentTool": "bicep"
+    }
+  ],
+  "metadata": {
+    "planName": "modernization-plan",
+    "projectName": "ZavaLoanPortal",
+    "language": "dotnet",
+    "createdAt": "2026-05-29T00:44:31Z",
+    "version": "1.0"
+  }
+}
